@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>預約查詢系統</title>
+    <!-- Bootstrap 4.6 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .page-title {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #3498db;
+        }
+        .search-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        .status-badge {
+            font-size: 0.85rem;
+            padding: 5px 12px;
+        }
+        .status-pending {
+            background-color: #ffc107;
+            color: #000;
+        }
+        .status-completed {
+            background-color: #28a745;
+            color: #fff;
+        }
+        .status-cancelled {
+            background-color: #dc3545;
+            color: #fff;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        .btn-search {
+            padding: 8px 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h2 class="page-title">門診預約查詢系統</h2>
+        
+        <!-- 搜尋區塊 -->
+        <div class="search-section">
+            <form id="searchForm">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="startDate">開始日期</label>
+                        <input type="date" class="form-control" id="startDate" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="endDate">結束日期</label>
+                        <input type="date" class="form-control" id="endDate" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="chartNo">病歷號</label>
+                        <input type="text" class="form-control" id="chartNo" placeholder="請輸入病歷號">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 text-right">
+                        <button type="submit" class="btn btn-primary btn-search">
+                            <i class="mr-1">🔍</i> 查詢
+                        </button>
+                        <button type="button" class="btn btn-secondary ml-2" onclick="resetForm()">
+                            重置
+                        </button>
+                        <button type="button" class="btn btn-success ml-2" onclick="addAppointment()">
+                            <i class="mr-1">➕</i> 新增預約
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- 預約清單 -->
+        <div class="table-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">預約清單</h5>
+                <div>
+                    <select id="batchStatus" class="form-control d-inline-block" style="width: auto;">
+                        <option value="">請選擇狀態</option>
+                        <option value="pending">未看診</option>
+                        <option value="completed">完成看診</option>
+                        <option value="cancelled">取消</option>
+                    </select>
+                    <button type="button" class="btn btn-warning ml-2" onclick="batchUpdate()">
+                        <i class="mr-1">🔄</i> 批次更新
+                    </button>
+                </div>
+            </div>
+            <table class="table table-hover table-bordered">
+                <thead class="thead-light">
+                    <tr>
+                        <th style="width: 5%;">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                        </th>
+                        <th style="width: 8%;">序號</th>
+                        <th style="width: 15%;">病歷號</th>
+                        <th style="width: 17%;">姓名</th>
+                        <th style="width: 18%;">預約時間</th>
+                        <th style="width: 15%;">狀態</th>
+                        <th style="width: 22%;">備註</th>
+                    </tr>
+                </thead>
+                <tbody id="appointmentList">
+                    <!-- 範例資料 -->
+                    <tr>
+                        <td><input type="checkbox" class="row-checkbox" data-status="pending"></td>
+                        <td>1</td>
+                        <td>A123456</td>
+                        <td>王小明</td>
+                        <td>2025-11-13 09:00</td>
+                        <td><span class="badge status-badge status-pending">未看診</span></td>
+                        <td>初診</td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="row-checkbox" data-status="completed"></td>
+                        <td>2</td>
+                        <td>B789012</td>
+                        <td>李小華</td>
+                        <td>2025-11-13 09:30</td>
+                        <td><span class="badge status-badge status-completed">完成看診</span></td>
+                        <td>複診</td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="row-checkbox" data-status="pending"></td>
+                        <td>3</td>
+                        <td>C345678</td>
+                        <td>張小英</td>
+                        <td>2025-11-13 10:00</td>
+                        <td><span class="badge status-badge status-pending">未看診</span></td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="row-checkbox" data-status="cancelled"></td>
+                        <td>4</td>
+                        <td>D901234</td>
+                        <td>陳小強</td>
+                        <td>2025-11-13 10:30</td>
+                        <td><span class="badge status-badge status-cancelled">取消</span></td>
+                        <td>患者取消</td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="row-checkbox" data-status="pending"></td>
+                        <td>5</td>
+                        <td>E567890</td>
+                        <td>林小芳</td>
+                        <td>2025-11-13 11:00</td>
+                        <td><span class="badge status-badge status-pending">未看診</span></td>
+                        <td>複診</td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="row-checkbox" data-status="completed"></td>
+                        <td>6</td>
+                        <td>F123789</td>
+                        <td>黃小龍</td>
+                        <td>2025-11-13 11:30</td>
+                        <td><span class="badge status-badge status-completed">完成看診</span></td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="row-checkbox" data-status="pending"></td>
+                        <td>7</td>
+                        <td>G456123</td>
+                        <td>吳小美</td>
+                        <td>2025-11-13 14:00</td>
+                        <td><span class="badge status-badge status-pending">未看診</span></td>
+                        <td>初診</td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="row-checkbox" data-status="cancelled"></td>
+                        <td>8</td>
+                        <td>H789456</td>
+                        <td>周小傑</td>
+                        <td>2025-11-13 14:30</td>
+                        <td><span class="badge status-badge status-cancelled">取消</span></td>
+                        <td>改約其他時間</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="text-muted text-right mt-2">
+                <small>共 <span id="totalCount">8</span> 筆資料</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 4.6 JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // 設定預設日期為今天
+        function setDefaultDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('startDate').value = today;
+            document.getElementById('endDate').value = today;
+        }
+
+        // 頁面載入時設定預設日期
+        window.addEventListener('DOMContentLoaded', function() {
+            setDefaultDates();
+        });
+
+        // 表單提交處理（範例用，不實際執行查詢）
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const chartNo = document.getElementById('chartNo').value;
+            
+            // 模擬查詢動作
+            alert('查詢條件：\n' + 
+                  '開始日期：' + startDate + '\n' +
+                  '結束日期：' + endDate + '\n' +
+                  '病歷號：' + (chartNo || '全部'));
+            
+            // 實際應用中，這裡會發送 AJAX 請求到後端
+            console.log('查詢參數:', { startDate, endDate, chartNo });
+        });
+
+        // 重置表單
+        function resetForm() {
+            document.getElementById('searchForm').reset();
+            setDefaultDates();
+            document.getElementById('chartNo').value = '';
+        }
+
+        // 全選/取消全選
+        function toggleSelectAll(checkbox) {
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+        }
+
+        // 新增預約（範例用）
+        function addAppointment() {
+            alert('開啟新增預約視窗\n（此為範例按鈕，無實際功能）');
+            // 實際應用中，這裡會開啟新增預約的對話框或跳轉到新增頁面
+        }
+
+        // 批次更新狀態
+        function batchUpdate() {
+            const selectedStatus = document.getElementById('batchStatus').value;
+            const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+            
+            if (checkedBoxes.length === 0) {
+                alert('請至少選擇一筆資料');
+                return;
+            }
+            
+            if (!selectedStatus) {
+                alert('請選擇要更新的狀態');
+                return;
+            }
+            
+            // 更新選中項目的狀態顯示
+            let updatedCount = 0;
+            checkedBoxes.forEach(checkbox => {
+                const row = checkbox.closest('tr');
+                const statusCell = row.querySelector('td:nth-child(6)');
+                const badge = statusCell.querySelector('.status-badge');
+                
+                // 移除舊的狀態class
+                badge.classList.remove('status-pending', 'status-completed', 'status-cancelled');
+                
+                // 根據選擇的狀態更新
+                let statusText = '';
+                let statusClass = '';
+                
+                switch(selectedStatus) {
+                    case 'pending':
+                        statusText = '未看診';
+                        statusClass = 'status-pending';
+                        break;
+                    case 'completed':
+                        statusText = '完成看診';
+                        statusClass = 'status-completed';
+                        break;
+                    case 'cancelled':
+                        statusText = '取消';
+                        statusClass = 'status-cancelled';
+                        break;
+                }
+                
+                badge.textContent = statusText;
+                badge.classList.add(statusClass);
+                checkbox.setAttribute('data-status', selectedStatus);
+                updatedCount++;
+            });
+            
+            alert('已更新 ' + updatedCount + ' 筆資料的狀態');
+            
+            // 取消所有選取
+            document.getElementById('selectAll').checked = false;
+            checkedBoxes.forEach(cb => cb.checked = false);
+            
+            // 重置狀態選擇器
+            document.getElementById('batchStatus').value = '';
+            
+            // 實際應用中，這裡會發送 AJAX 請求到後端更新資料庫
+            console.log('批次更新:', updatedCount + '筆資料');
+        }
+    </script>
+</body>
+</html>
