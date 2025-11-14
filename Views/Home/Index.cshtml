@@ -2,7 +2,421 @@
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<style>
+    body {
+        background-color: #f5f5f5;
+        font-family: 'Microsoft JhengHei', Arial, sans-serif;
+    }
+
+    .main-container {
+        background-color: white;
+        border-radius: 8px;
+        padding: 30px;
+        margin: 30px auto;
+        max-width: 1400px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .page-title {
+        color: #333;
+        font-size: 32px;
+        font-weight: bold;
+        padding-bottom: 15px;
+        border-bottom: 3px solid #4a90e2;
+        margin-bottom: 30px;
+    }
+
+    .search-section {
+        background-color: #f8f9fa;
+        padding: 25px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+
+    .btn-search {
+        background-color: #4a90e2;
+        color: white;
+        padding: 10px 30px;
+    }
+
+        .btn-search:hover {
+            background-color: #357abd;
+            color: white;
+        }
+
+    .btn-reset {
+        background-color: #6c757d;
+        color: white;
+        padding: 10px 30px;
+    }
+
+        .btn-reset:hover {
+            background-color: #5a6268;
+            color: white;
+        }
+
+    .btn-add {
+        background-color: #28a745;
+        color: white;
+        padding: 10px 30px;
+    }
+
+        .btn-add:hover {
+            background-color: #218838;
+            color: white;
+        }
+
+    .list-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .list-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .batch-update-area {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .btn-batch-update {
+        background-color: #ffc107;
+        color: #333;
+        padding: 8px 25px;
+        font-weight: bold;
+    }
+
+        .btn-batch-update:hover {
+            background-color: #e0a800;
+            color: #333;
+        }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .appointment-table {
+        margin-bottom: 0;
+    }
+
+        .appointment-table thead {
+            background-color: #e9ecef;
+        }
+
+        .appointment-table th {
+            font-weight: bold;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            padding: 12px;
+            white-space: nowrap;
+        }
+
+        .appointment-table td {
+            vertical-align: middle;
+            padding: 12px;
+        }
+
+    .status-badge {
+        padding: 6px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+        display: inline-block;
+        min-width: 80px;
+        text-align: center;
+    }
+
+    .status-pending {
+        background-color: #ffc107;
+        color: #333;
+    }
+
+    .status-completed {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .status-cancelled {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .btn-edit {
+        padding: 5px 15px;
+        font-size: 14px;
+    }
+
+    .record-count {
+        text-align: right;
+        margin-top: 15px;
+        color: #6c757d;
+        font-size: 14px;
+    }
+</style>
+
+<div class="main-container">
+    <h1 class="page-title">門診預約查詢系統</h1>
+
+    <!-- 查詢區塊 -->
+    <div class="search-section">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label for="startDate" class="form-label">開始日期</label>
+                <input type="date" class="form-control" id="startDate">
+            </div>
+            <div class="col-md-3">
+                <label for="endDate" class="form-label">結束日期</label>
+                <input type="date" class="form-control" id="endDate">
+            </div>
+            <div class="col-md-3">
+                <label for="medicalId" class="form-label">病歷號</label>
+                <input type="text" class="form-control" id="medicalId" placeholder="請輸入病歷號">
+            </div>
+            <div class="col-md-3">
+                <label for="nationalId" class="form-label">身分證</label>
+                <input type="text" class="form-control" id="nationalId" placeholder="請輸入身分證號">
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12 text-end">
+                <button type="button" class="btn btn-search">
+                    <i class="bi bi-search"></i> 查詢
+                </button>
+                <button type="button" class="btn btn-reset" onclick="clearSearch()">
+                    <i class="bi bi-arrow-clockwise"></i> 重置
+                </button>
+                <button type="button" class="btn btn-add">
+                    <i class="bi bi-plus-lg"></i> 新增預約
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 預約清單 -->
+    <div class="list-section">
+        <div class="list-section-header">
+            <h2 class="list-title">預約清單</h2>
+            <div class="batch-update-area">
+                <label class="me-2">批次更新狀態：</label>
+                <select class="form-select" id="batchStatus" style="width: auto;">
+                    <option value="">請選擇狀態</option>
+                    <option value="pending">未看診</option>
+                    <option value="completed">完成看診</option>
+                    <option value="cancelled">取消</option>
+                </select>
+                <button type="button" class="btn btn-batch-update" onclick="batchUpdate()">
+                    <i class="bi bi-arrow-repeat"></i> 批次更新
+                </button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="table table-hover appointment-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">
+                            <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll(this)">
+                        </th>
+                        <th style="width: 60px;">序號</th>
+                        <th>病歷號</th>
+                        <th>姓名</th>
+                        <th>開始時間</th>
+                        <th>結束時間</th>
+                        <th>復健時間</th>
+                        <th>狀態</th>
+                        <th>備註</th>
+                        <th style="width: 100px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="appointmentList">
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input row-checkbox"></td>
+                        <td>1</td>
+                        <td>A123456</td>
+                        <td>王小明</td>
+                        <td>2025-11-13 09:00</td>
+                        <td>2025-11-13 09:30</td>
+                        <td>30 分鐘</td>
+                        <td><span class="status-badge status-pending">未看診</span></td>
+                        <td>初診</td>
+                        <td><button class="btn btn-primary btn-sm btn-edit" onclick="editRecord(this)">編輯</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input row-checkbox"></td>
+                        <td>2</td>
+                        <td>B789012</td>
+                        <td>李小華</td>
+                        <td>2025-11-13 09:30</td>
+                        <td>2025-11-13 10:00</td>
+                        <td>30 分鐘</td>
+                        <td><span class="status-badge status-completed">完成看診</span></td>
+                        <td>複診</td>
+                        <td><button class="btn btn-primary btn-sm btn-edit" onclick="editRecord(this)">編輯</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input row-checkbox"></td>
+                        <td>3</td>
+                        <td>C345678</td>
+                        <td>張小英</td>
+                        <td>2025-11-13 10:00</td>
+                        <td>2025-11-13 10:45</td>
+                        <td>45 分鐘</td>
+                        <td><span class="status-badge status-pending">未看診</span></td>
+                        <td>-</td>
+                        <td><button class="btn btn-primary btn-sm btn-edit" onclick="editRecord(this)">編輯</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input row-checkbox"></td>
+                        <td>4</td>
+                        <td>D901234</td>
+                        <td>陳小強</td>
+                        <td>2025-11-13 10:30</td>
+                        <td>2025-11-13 11:00</td>
+                        <td>30 分鐘</td>
+                        <td><span class="status-badge status-cancelled">取消</span></td>
+                        <td>患者取消</td>
+                        <td><button class="btn btn-primary btn-sm btn-edit" onclick="editRecord(this)">編輯</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input row-checkbox"></td>
+                        <td>5</td>
+                        <td>E567890</td>
+                        <td>林小芳</td>
+                        <td>2025-11-13 11:00</td>
+                        <td>2025-11-13 11:30</td>
+                        <td>30 分鐘</td>
+                        <td><span class="status-badge status-pending">未看診</span></td>
+                        <td>複診</td>
+                        <td><button class="btn btn-primary btn-sm btn-edit" onclick="editRecord(this)">編輯</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input row-checkbox"></td>
+                        <td>6</td>
+                        <td>F123789</td>
+                        <td>黃小龍</td>
+                        <td>2025-11-13 11:30</td>
+                        <td>2025-11-13 12:30</td>
+                        <td>60 分鐘</td>
+                        <td><span class="status-badge status-completed">完成看診</span></td>
+                        <td>-</td>
+                        <td><button class="btn btn-primary btn-sm btn-edit" onclick="editRecord(this)">編輯</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input row-checkbox"></td>
+                        <td>7</td>
+                        <td>G456123</td>
+                        <td>吳小美</td>
+                        <td>2025-11-13 14:00</td>
+                        <td>2025-11-13 14:30</td>
+                        <td>30 分鐘</td>
+                        <td><span class="status-badge status-pending">未看診</span></td>
+                        <td>初診</td>
+                        <td><button class="btn btn-primary btn-sm btn-edit" onclick="editRecord(this)">編輯</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input row-checkbox"></td>
+                        <td>8</td>
+                        <td>H789456</td>
+                        <td>周小傑</td>
+                        <td>2025-11-13 14:30</td>
+                        <td>2025-11-13 15:15</td>
+                        <td>45 分鐘</td>
+                        <td><span class="status-badge status-cancelled">取消</span></td>
+                        <td>改約其他時間</td>
+                        <td><button class="btn btn-primary btn-sm btn-edit" onclick="editRecord(this)">編輯</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="record-count">
+            共 <strong>8</strong> 筆資料
+        </div>
+    </div>
 </div>
+
+<script>
+    // 設定當天日期為預設值
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('startDate').value = today;
+        document.getElementById('endDate').value = today;
+    });
+
+    // 全選/取消全選
+    function toggleSelectAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    }
+
+    // 清除查詢條件
+    function clearSearch() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('startDate').value = today;
+        document.getElementById('endDate').value = today;
+        document.getElementById('medicalId').value = '';
+        document.getElementById('nationalId').value = '';
+    }
+
+    // 批次更新狀態
+    function batchUpdate() {
+        const selectedStatus = document.getElementById('batchStatus').value;
+        const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+
+        if (checkboxes.length === 0) {
+            alert('請至少選擇一筆資料');
+            return;
+        }
+
+        if (!selectedStatus) {
+            alert('請選擇要更新的狀態');
+            return;
+        }
+
+        let statusText = '';
+        let statusClass = '';
+
+        switch(selectedStatus) {
+            case 'pending':
+                statusText = '未看診';
+                statusClass = 'status-pending';
+                break;
+            case 'completed':
+                statusText = '完成看診';
+                statusClass = 'status-completed';
+                break;
+            case 'cancelled':
+                statusText = '取消';
+                statusClass = 'status-cancelled';
+                break;
+        }
+
+        checkboxes.forEach(checkbox => {
+            const row = checkbox.closest('tr');
+            const statusCell = row.querySelector('td:nth-child(8)');
+            statusCell.innerHTML = `<span class="status-badge ${statusClass}">${statusText}</span>`;
+        });
+
+        alert(`已更新 ${checkboxes.length} 筆資料的狀態為「${statusText}」`);
+
+        // 清除勾選
+        checkboxes.forEach(cb => cb.checked = false);
+        document.getElementById('selectAll').checked = false;
+        document.getElementById('batchStatus').value = '';
+    }
+
+    // 編輯單筆資料
+    function editRecord(button) {
+        const row = button.closest('tr');
+        const rowNumber = row.querySelector('td:nth-child(2)').textContent;
+        const medicalId = row.querySelector('td:nth-child(3)').textContent;
+        const name = row.querySelector('td:nth-child(4)').textContent;
+        alert(`編輯功能 - 第 ${rowNumber} 筆\n病歷號：${medicalId}\n姓名：${name}`);
+    }
+</script>
+
+
