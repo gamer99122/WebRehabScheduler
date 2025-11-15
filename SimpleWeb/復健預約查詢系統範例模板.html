@@ -170,7 +170,7 @@
                     <button type="button" class="btn btn-reset" onclick="clearSearch()">
                         <i class="bi bi-arrow-clockwise"></i> 重置
                     </button>
-                    <button type="button" class="btn btn-add">
+                    <button type="button" class="btn btn-add" onclick="openAppointmentModal('add')">
                         <i class="bi bi-plus-lg"></i> 新增預約
                     </button>
                 </div>
@@ -319,14 +319,191 @@
         </div>
     </div>
 
+    <!-- 新增/編輯預約 Modal -->
+    <div class="modal fade" id="appointmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="appointmentModalTitle">新增預約</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="appointmentForm">
+                        <input type="hidden" id="appointmentId" value="">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="formMedicalId" class="form-label">病歷號 <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="formMedicalId" required>
+                                    <button class="btn btn-outline-primary" type="button" onclick="searchPatient()">
+                                        <i class="bi bi-search"></i> 查詢
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="formPatientName" class="form-label">姓名 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="formPatientName" readonly required>
+                                <small class="text-muted">請先輸入病歷號並點擊查詢</small>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="formStartDate" class="form-label">預約日期 <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="formStartDate" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="formStartTime" class="form-label">開始時間 <span class="text-danger">*</span></label>
+                                <select class="form-select" id="formStartTime" required onchange="calculateDuration()">
+                                    <option value="">請選擇時間</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="formEndTime" class="form-label">結束時間 <span class="text-danger">*</span></label>
+                                <select class="form-select" id="formEndTime" required onchange="calculateDuration()">
+                                    <option value="">請選擇時間</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="formDurationDisplay" class="form-label">復健時間</label>
+                                <input type="text" class="form-control" id="formDurationDisplay" readonly placeholder="自動計算">
+                                <input type="hidden" id="formDuration">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="formStatus" class="form-label">狀態 <span class="text-danger">*</span></label>
+                                <select class="form-select" id="formStatus" required>
+                                    <option value="pending">未看診</option>
+                                    <option value="completed">完成看診</option>
+                                    <option value="cancelled">取消</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="formNote" class="form-label">備註</label>
+                                <input type="text" class="form-control" id="formNote" placeholder="選填">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveAppointment()">
+                        <i class="bi bi-save"></i> 儲存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // DEMO 用的病患資料庫
+        const patientDatabase = {
+            'A123456': '王小明',
+            'B789012': '李小華',
+            'C345678': '張小英',
+            'D901234': '陳小強',
+            'E567890': '林小芳',
+            'F123789': '黃小龍',
+            'G456123': '吳小美',
+            'H789456': '周小傑',
+            'I111222': '劉小玲',
+            'J333444': '蔡小豪'
+        };
+
         // 設定當天日期為預設值
         document.addEventListener('DOMContentLoaded', function() {
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('startDate').value = today;
             document.getElementById('endDate').value = today;
+            
+            // 生成時間選項（5分鐘間隔，從 08:00 到 18:00）
+            generateTimeOptions();
         });
+
+        // 生成時間選項（5分鐘間隔）
+        function generateTimeOptions() {
+            const startTimeSelect = document.getElementById('formStartTime');
+            const endTimeSelect = document.getElementById('formEndTime');
+            
+            // 清空現有選項
+            startTimeSelect.innerHTML = '<option value="">請選擇時間</option>';
+            endTimeSelect.innerHTML = '<option value="">請選擇時間</option>';
+            
+            // 生成從 08:00 到 18:00，每 5 分鐘一個選項
+            for (let hour = 8; hour <= 18; hour++) {
+                for (let minute = 0; minute < 60; minute += 5) {
+                    // 18:00 之後不顯示
+                    if (hour === 18 && minute > 0) break;
+                    
+                    const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+                    
+                    const option1 = document.createElement('option');
+                    option1.value = timeStr;
+                    option1.textContent = timeStr;
+                    startTimeSelect.appendChild(option1);
+                    
+                    const option2 = document.createElement('option');
+                    option2.value = timeStr;
+                    option2.textContent = timeStr;
+                    endTimeSelect.appendChild(option2);
+                }
+            }
+        }
+
+        // 查詢病患資料
+        function searchPatient() {
+            const medicalId = document.getElementById('formMedicalId').value.trim();
+            
+            if (!medicalId) {
+                alert('請輸入病歷號');
+                return;
+            }
+            
+            // 從資料庫查詢
+            const patientName = patientDatabase[medicalId];
+            
+            if (patientName) {
+                document.getElementById('formPatientName').value = patientName;
+                // 自動聚焦到日期欄位
+                document.getElementById('formStartDate').focus();
+            } else {
+                alert('查無此病歷號，請確認後重新輸入');
+                document.getElementById('formPatientName').value = '';
+            }
+        }
+
+        // 計算復健時間
+        function calculateDuration() {
+            const startTime = document.getElementById('formStartTime').value;
+            const endTime = document.getElementById('formEndTime').value;
+            
+            if (startTime && endTime) {
+                const [startHour, startMin] = startTime.split(':').map(Number);
+                const [endHour, endMin] = endTime.split(':').map(Number);
+                
+                const startTotalMin = startHour * 60 + startMin;
+                const endTotalMin = endHour * 60 + endMin;
+                
+                const duration = endTotalMin - startTotalMin;
+                
+                if (duration > 0) {
+                    document.getElementById('formDuration').value = duration;
+                    document.getElementById('formDurationDisplay').value = `${duration} 分鐘`;
+                } else if (duration <= 0) {
+                    alert('結束時間必須大於開始時間');
+                    document.getElementById('formEndTime').value = '';
+                    document.getElementById('formDuration').value = '';
+                    document.getElementById('formDurationDisplay').value = '';
+                }
+            }
+        }
 
         // 全選/取消全選
         function toggleSelectAll(checkbox) {
@@ -396,7 +573,116 @@
             const rowNumber = row.querySelector('td:nth-child(2)').textContent;
             const medicalId = row.querySelector('td:nth-child(3)').textContent;
             const name = row.querySelector('td:nth-child(4)').textContent;
-            alert(`編輯功能 - 第 ${rowNumber} 筆\n病歷號：${medicalId}\n姓名：${name}`);
+            const startTime = row.querySelector('td:nth-child(5)').textContent;
+            const endTime = row.querySelector('td:nth-child(6)').textContent;
+            const duration = row.querySelector('td:nth-child(7)').textContent.replace(' 分鐘', '');
+            const statusElement = row.querySelector('td:nth-child(8) .status-badge');
+            const note = row.querySelector('td:nth-child(9)').textContent;
+            
+            // 判斷狀態
+            let status = 'pending';
+            if (statusElement.classList.contains('status-completed')) {
+                status = 'completed';
+            } else if (statusElement.classList.contains('status-cancelled')) {
+                status = 'cancelled';
+            }
+            
+            // 開啟編輯 Modal
+            openAppointmentModal('edit', {
+                id: rowNumber,
+                medicalId: medicalId,
+                name: name,
+                startTime: startTime,
+                endTime: endTime,
+                duration: duration,
+                status: status,
+                note: note === '-' ? '' : note
+            });
+        }
+
+        // 開啟預約 Modal（新增或編輯）
+        function openAppointmentModal(mode, data = null) {
+            const modal = new bootstrap.Modal(document.getElementById('appointmentModal'));
+            const modalTitle = document.getElementById('appointmentModalTitle');
+            
+            if (mode === 'add') {
+                // 新增模式
+                modalTitle.textContent = '新增預約';
+                document.getElementById('appointmentForm').reset();
+                document.getElementById('appointmentId').value = '';
+                
+                // 設定預設日期為今天
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('formStartDate').value = today;
+                document.getElementById('formStatus').value = 'pending';
+                
+                // 清空姓名欄位
+                document.getElementById('formPatientName').value = '';
+            } else if (mode === 'edit' && data) {
+                // 編輯模式
+                modalTitle.textContent = '編輯預約';
+                document.getElementById('appointmentId').value = data.id;
+                document.getElementById('formMedicalId').value = data.medicalId;
+                document.getElementById('formPatientName').value = data.name;
+                
+                // 分割日期和時間
+                const [date, time] = data.startTime.split(' ');
+                document.getElementById('formStartDate').value = date;
+                document.getElementById('formStartTime').value = time;
+                
+                const [endDate, endTimeValue] = data.endTime.split(' ');
+                document.getElementById('formEndTime').value = endTimeValue;
+                
+                document.getElementById('formDuration').value = data.duration;
+                document.getElementById('formDurationDisplay').value = `${data.duration} 分鐘`;
+                document.getElementById('formStatus').value = data.status;
+                document.getElementById('formNote').value = data.note;
+            }
+            
+            modal.show();
+        }
+
+        // 儲存預約
+        function saveAppointment() {
+            const form = document.getElementById('appointmentForm');
+            
+            // 檢查病患姓名是否已填入
+            const patientName = document.getElementById('formPatientName').value;
+            if (!patientName) {
+                alert('請先使用病歷號查詢病患資料');
+                return;
+            }
+            
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            const appointmentId = document.getElementById('appointmentId').value;
+            const medicalId = document.getElementById('formMedicalId').value;
+            const startDate = document.getElementById('formStartDate').value;
+            const startTime = document.getElementById('formStartTime').value;
+            const endTime = document.getElementById('formEndTime').value;
+            const duration = document.getElementById('formDuration').value;
+            const status = document.getElementById('formStatus').value;
+            const note = document.getElementById('formNote').value || '-';
+            
+            const startDateTime = `${startDate} ${startTime}`;
+            const endDateTime = `${startDate} ${endTime}`;
+            
+            if (appointmentId) {
+                // 編輯模式
+                alert(`編輯預約成功！\n\n病歷號：${medicalId}\n姓名：${patientName}\n開始時間：${startDateTime}\n結束時間：${endDateTime}\n復健時間：${duration} 分鐘`);
+            } else {
+                // 新增模式
+                alert(`新增預約成功！\n\n病歷號：${medicalId}\n姓名：${patientName}\n開始時間：${startDateTime}\n結束時間：${endDateTime}\n復健時間：${duration} 分鐘`);
+            }
+            
+            // 關閉 Modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('appointmentModal'));
+            modal.hide();
+            
+            // 實際應用中，這裡應該要更新表格資料或重新載入
         }
     </script>
 </body>
