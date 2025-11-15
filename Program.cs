@@ -1,7 +1,14 @@
+using WebRehabScheduler.Filters;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    // === 註冊全域 Filter ===
+    options.Filters.Add<WebRehabScheduler.Filters.TherapistAuthorizationFilter>();
+});
+
 
 // === 新增 Session 設定 ===
 builder.Services.AddSession(options =>
@@ -21,9 +28,18 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-else
+
+
+app.UseHttpsRedirection();
+app.UseRouting();
+
+// === 必須在 UseRouting 之後，UseEndpoints 之前 ===
+app.UseSession();
+// === Session 中介軟體 ===
+
+// === 開發模式：自動設定預設 TherapistId ===
+if (app.Environment.IsDevelopment())
 {
-    // === 開發模式：自動設定預設 TherapistId ===
     app.Use(async (context, next) =>
     {
         if (string.IsNullOrEmpty(context.Session.GetString("TherapistId")))
@@ -32,15 +48,8 @@ else
         }
         await next();
     });
-    // === 開發模式設定結束 ===
 }
-
-app.UseHttpsRedirection();
-app.UseRouting();
-
-// === 必須在 UseRouting 之後，UseEndpoints 之前 ===
-app.UseSession();
-// === Session 中介軟體 ===
+// === 開發模式設定結束 ===
 
 app.UseAuthorization();
 
